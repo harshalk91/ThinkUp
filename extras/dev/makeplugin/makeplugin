@@ -1,0 +1,629 @@
+#!/bin/bash
+
+# Plugin Maker
+# Generates all the necessary files and folders for a new CrawlerPlugin
+# The 1st argument passed in is the name of the new plugin.
+
+plugin_name_lcase="$(tr [A-Z] [a-z] <<< "$1")"
+author_name=$2
+author_email=$3
+
+# Check we got the name of the plugin
+if [ "$#" -ne 3 ]; then
+  echo "3 Parameters required, the name of the plugin, your name, your email address. Make sure to escape any spaces with a \\"
+  exit 1
+fi
+
+# Function to add the preamble to the top of the php files
+# Parameter 1 = Name of Plugin  Parameter 2 = Path of file to be written to
+function preamble {
+# Write everything before the END keyword to the file passed in as parameter 2
+cat<< END >$2
+<?php
+/**
+ *
+ * $2
+ *
+ * LICENSE:
+ *
+ * This file is part of ThinkUp (http://thinkup.com).
+ *
+ * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
+ * later version.
+ *
+ * ThinkUp is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with ThinkUp.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ *
+ *
+ * $1 (name of file)
+ *
+ * Description of what this class does
+ *
+ * Copyright (c) 2013 $author_name
+ *
+ * @author $author_name $author_email
+ * @license http://www.gnu.org/licenses/gpl.html
+ * @copyright 2013 $author_name
+ */
+END
+}
+
+# Navigate to the root directory
+cd `dirname $0`/../../..
+
+# Create the root plugin folder
+mkdir 'webapp/plugins/'$plugin_name_lcase
+# Create the model folder
+mkdir 'webapp/plugins/'$plugin_name_lcase'/model'
+# Create the view folder
+mkdir 'webapp/plugins/'$plugin_name_lcase'/view'
+# Create the controller folder
+mkdir 'webapp/plugins/'$plugin_name_lcase'/controller'
+# Create the assets folder
+mkdir 'webapp/plugins/'$plugin_name_lcase'/assets/'
+mkdir 'webapp/plugins/'$plugin_name_lcase'/assets/img'
+cp webapp/plugins/hellothinkup/assets/img/plugin_icon.png 'webapp/plugins/'$plugin_name_lcase'/assets/img/plugin_icon.png'
+# Create the tests folder
+mkdir 'webapp/plugins/'$plugin_name_lcase'/tests'
+# Make the test data folder
+mkdir 'webapp/plugins/'$plugin_name_lcase'/tests/apidata'
+# Make the test classes folder
+mkdir 'webapp/plugins/'$plugin_name_lcase'/tests/classes'
+
+# Now its time to write all the data to our default files
+
+# Plugin Config Controller
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/controller/class.'$1'PluginConfigurationController.php'
+
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/controller/class.'$1'PluginConfigurationController.php'
+
+class $1PluginConfigurationController extends PluginConfigurationController {
+
+    public function __construct(\$owner) {
+        parent::__construct(\$owner, '$plugin_name_lcase');
+        \$this->disableCaching();
+        \$this->owner = \$owner;
+    }
+
+    public function authControl() {
+        \$config = Config::getInstance();
+        Loader::definePathConstants();
+        \$this->setViewTemplate( THINKUP_WEBAPP_PATH.'plugins/$plugin_name_lcase/view/account.index.tpl');
+        \$this->addToView('message', 'Hello ThinkUp world! This is an auto-generated plugin configuration '.
+        'page for ' . \$this->owner->email .'.');
+        \$this->view_mgr->addHelp('$plugin_name_lcase', 'contribute/developers/plugins/buildplugin');
+
+        /** set option fields **/
+        // name text field
+        \$name_field = array('name' => 'testname', 'label' => 'Your Name', 'size' => 40); // set element name and label
+        \$name_field['default_value'] = 'ThinkUp User'; // set default value
+        \$this->addPluginOption(self::FORM_TEXT_ELEMENT, \$name_field); // add element
+        // set testname header
+        \$this->addPluginOptionHeader('testname', 'User Info'); // add a header for an element
+        // set a special required message
+        \$this->addPluginOptionRequiredMessage('testname',
+            'Please enter a name, because we\'d really like to have one...');
+
+        // gender radio field
+        \$gender_field = array('name' => 'testradio', 'label' => 'You Like'); // set an element name and label
+        \$gender_field['values'] = array('Cookies' => 1, 'Cake' => 2, 'Other' => 3);
+        \$gender_field['default_value'] = '3'; // set default value
+        \$this->addPluginOption(self::FORM_RADIO_ELEMENT, \$gender_field); // add element
+
+        // Birth Year Select
+        \$bday_field = array('name' => 'testbirthyear', 'label' => 'Select The Year You Were Born');
+        \$years = array();
+        \$i = 1900;
+        while (\$i <= 2010) {
+            \$years['Born in ' . \$i] = \$i;
+            \$i++;
+        }
+        \$bday_field['values'] =  \$years;
+        \$bday_field['default_value'] = '2005';
+        \$this->addPluginOption(self::FORM_SELECT_ELEMENT, \$bday_field);
+
+        // Enable registration stuff
+        \$reg_field = array('name' => 'testregopen', 'label' => 'Open Registration');
+        \$this->addPluginOptionHeader('testregopen', 'Registration Options');
+        \$reg_field['values'] = array('Open' => 1, 'Closed' => 0);
+        \$this->addPluginOption(self::FORM_RADIO_ELEMENT, \$reg_field);
+
+        // registration key
+        \$reg_key = array('name' => 'RegKey', 'validation_regex' => '^\d+\$');
+        \$this->addPluginOption(self::FORM_TEXT_ELEMENT, \$reg_key);
+        \$this->setPluginOptionNotRequired('RegKey');
+        \$this->addPluginOptionRequiredMessage('RegKey',
+            'Please enter interger value for RegKey');
+
+        // advanced data
+        \$adv1 = array('name' => 'AdvancedInfo1', 'label' => '1st advanced field', 'advanced' => true);
+        \$this->addPluginOption(self::FORM_TEXT_ELEMENT, \$adv1);
+        \$this->setPluginOptionNotRequired('AdvancedInfo1'); // by default not required
+
+        \$adv2 = array('name' => 'AdvancedInfo2', 'label' => '2nd advanced field', 'advanced' => true);
+        \$this->addPluginOption(self::FORM_TEXT_ELEMENT, \$adv2);
+
+        \$plugin = new $1Plugin();
+        \$this->addToView('is_configured', \$plugin->isConfigured());
+
+        return \$this->generateView();
+    }
+
+    public function saveAccessTokens() {
+
+    }
+
+}
+
+END
+
+# Plugin Config Controller view
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/view/account.index.tpl'
+<div class="plugin-info">
+
+    <span class="pull-right">{insert name="help_link" id='$plugin_name_lcase'}</span>
+    <h1>
+        <img src="{\$site_root_path}plugins/$plugin_name_lcase/assets/img/plugin_icon.png" class="plugin-image">
+        $1 Plugin
+    </h1>
+
+    <p>{\$message}</p>
+
+</div>
+
+{if \$user_is_admin}
+{include file="_plugin.showhider.tpl"}
+
+    {include file="_usermessage.tpl" field="setup"}
+
+    {\$options_markup}
+
+</div>
+{/if}
+
+END
+
+# PluginName.php
+# This file has some extra data at the beginning so we dont use the normal function
+
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/controller/'$plugin_name_lcase'.php'
+<?php
+/*
+ Plugin Name: $1
+ Plugin URI: https://github.com/ThinkUpLLC/ThinkUp/tree/master/webapp/plugins/$plugin_name_lcase/
+ Description:
+ Class: $1Plugin
+ Icon: assets/img/plugin_icon.png
+ Version: 0.01
+ Author:
+ */
+/**
+ *
+ * webapp/plugins/$1/controller/$1.php
+ *
+ * LICENSE:
+ *
+ * This file is part of ThinkUp (http://thinkup.com).
+ *
+ * ThinkUp is free software: you can redistribute it and/or modify it under the terms of the GNU General Public
+ * License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any
+ * later version.
+ *
+ * ThinkUp is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+ * warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
+ *
+ * You should have received a copy of the GNU General Public License along with ThinkUp.  If not, see
+ * <http://www.gnu.org/licenses/>.
+ *
+ *
+ * $1 (name of file)
+ *
+ * Description of what this class does
+ *
+ * Copyright (c) 2013 $author_name
+ *
+ * @author $author_name $author_email
+ * @license http://www.gnu.org/licenses/gpl.html
+ * @copyright 2013 $author_name
+ */
+
+\$webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
+\$webapp_plugin_registrar->registerPlugin('$plugin_name_lcase', '$1Plugin');
+
+\$crawler_plugin_registrar = PluginRegistrarCrawler::getInstance();
+\$crawler_plugin_registrar->registerCrawlerPlugin('$1Plugin', true);
+
+END
+
+
+# Now generate the default files in the model directory
+
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/model/class.'$1'Plugin.php'
+
+# Now insert the standard methods
+
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/model/class.'$1'Plugin.php'
+
+class $1Plugin extends Plugin implements CrawlerPlugin {
+
+    public function __construct(\$vals=null) {
+        parent::__construct(\$vals);
+        \$this->folder_name = '$plugin_name_lcase';
+    }
+
+    public function activate() {
+
+    }
+
+    public function deactivate() {
+
+    }
+
+    public function renderConfiguration(\$owner) {
+        \$controller = new $1PluginConfigurationController(\$owner);
+        return \$controller->go();
+    }
+
+    public function crawl() {
+
+    }
+
+    public function renderInstanceConfiguration(\$owner, \$instance_username, \$instance_network) {
+        return "";
+    }
+}
+END
+
+
+# Now generate the crawler file
+
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/model/class.'$1'Crawler.php'
+
+# Now insert the standard methods
+
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/model/class.'$1'Crawler.php'
+
+class $1Crawler {
+    /**
+     *
+     * @var Instance
+     */
+    var \$instance;
+    /**
+     *
+     * @var Logger
+     */
+    var \$logger;
+    /**
+     * @var str
+     */
+    var \$access_token;
+    /**
+     *
+     * @var $1APIAccessor
+     */
+    var \$api_accessor;
+    /**
+     *
+     * @param Instance \$instance
+     * @return \$1Crawler
+     */
+    public function __construct(\$instance, \$access_token) {
+        \$this->instance = \$instance;
+        \$this->logger = Logger::getInstance();
+        \$this->access_token = \$access_token;
+        \$this->api_accessor = new $1APIAccessor();
+    }
+
+    /**
+     * Retrieve OAuth and refresh tokens
+     */
+    public function getOAuthTokens() {
+    }
+
+    /**
+     * Fetch more information about the instance user and verify that the OAuth tolens are still valid, if not refresh
+     * them
+     */
+    public function initializeInstanceUser(\$client_id, \$client_secret, \$access_token, \$refresh_token, \$owner_id) {
+    }
+
+}
+END
+
+
+# Now generate the API Accessor file
+
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/model/class.'$1'APIAccessor.php'
+
+# Now insert the standard methods
+
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/model/class.'$1'APIAccessor.php'
+
+class $1APIAccessor{
+
+    /**
+     * @var str
+     */
+    var \$api_domain = '';
+    /**
+     * Make an API request.
+     * @param str \$path
+     * @param str \$access_token
+     * @param arr \$fields Array of URL parameters
+     * @return array Decoded JSON response
+     */
+    public function apiRequest(\$path, \$access_token, \$fields=null) {
+        \$url = \$this->api_domain.$path.'?access_token='.\$access_token;
+        if (\$fields != null ) {
+            foreach (\$fields as \$key=>\$value) {
+                \$url = \$url.'&'.\$key.'='.\$value;
+            }
+        }
+        \$result = Utils::getURLContents(\$url);
+        return json_decode(\$result);
+    }
+
+    /**
+     * Make a POST API request with the absolute URL. This URL needs to include the URL prefix at
+     * the start and the access token at the end as well as everything in between. It is literally the raw URL that
+     * needs to be passed in.
+     *
+     * @param str \$path
+     * @param bool \$decode_json Defaults to true, if true returns decoded JSON
+     * @return array Decoded JSON response
+     */
+    public function rawPostApiRequest(\$path, \$fields, \$decode_json=true) {
+        \$result = Utils::getURLContentsViaPost(\$path, \$fields);
+        if (\$decode_json) {
+            \$result = json_decode(\$result);
+        }
+        return \$result;
+    }
+
+}
+END
+
+
+# Now finally generate the default test files
+
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/tests/TestOf'$1'Plugin.php'
+
+
+# Now insert the default methods and require statements
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/tests/TestOf'$1'Plugin.php'
+
+require_once 'tests/init.tests.php';
+require_once THINKUP_ROOT_PATH.'webapp/_lib/extlib/simpletest/autorun.php';
+require_once THINKUP_ROOT_PATH.'webapp/config.inc.php';
+require_once THINKUP_ROOT_PATH.'tests/classes/class.ThinkUpBasicUnitTestCase.php';
+require_once THINKUP_ROOT_PATH. 'webapp/plugins/$plugin_name_lcase/model/class.$1Plugin.php';
+
+class TestOf$1Plugin extends ThinkUpUnitTestCase {
+
+    public function setUp(){
+        parent::setUp();
+        \$webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
+        \$webapp_plugin_registrar->registerPlugin('$plugin_name_lcase', '$1Plugin');
+        \$webapp_plugin_registrar->setActivePlugin('$plugin_name_lcase');
+    }
+
+    public function tearDown() {
+        parent::tearDown();
+    }
+
+    public function testConstructor() {
+        \$plugin = new $1Plugin();
+        \$this->assertNotNull(\$plugin);
+        \$this->assertIsA(\$plugin, '$1Plugin');
+        \$this->assertEqual(count(\$plugin->required_settings), 2); // You may need to alter this value
+        \$this->assertFalse(\$plugin->isConfigured());
+    }
+
+}
+END
+
+
+# Now generate the PluginConfigController test default file
+
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/tests/TestOf'$1'PluginConfigurationController.php'
+
+# Now the default methods and require statements
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/tests/TestOf'$1'PluginConfigurationController.php'
+
+require_once 'tests/init.tests.php';
+require_once THINKUP_ROOT_PATH.'webapp/_lib/extlib/simpletest/autorun.php';
+require_once THINKUP_ROOT_PATH.'webapp/config.inc.php';
+require_once THINKUP_ROOT_PATH.'tests/classes/class.ThinkUpBasicUnitTestCase.php';
+require_once THINKUP_ROOT_PATH.'webapp/plugins/$plugin_name_lcase/controller/class.$1PluginConfigurationController.php';
+require_once THINKUP_ROOT_PATH.'webapp/plugins/$plugin_name_lcase/model/class.$1Crawler.php';
+require_once THINKUP_ROOT_PATH.'webapp/plugins/$plugin_name_lcase/model/class.$1Plugin.php';
+require_once THINKUP_ROOT_PATH.'webapp/plugins/$plugin_name_lcase/tests/classes/mock.$1APIAccessor.php';
+
+class TestOf$1PluginConfigurationController extends ThinkUpUnitTestCase {
+
+    public function setUp(){
+        parent::setUp();
+        \$webapp_plugin_registrar = PluginRegistrarWebapp::getInstance();
+        \$webapp_plugin_registrar->registerPlugin('$plugin_name_lcase', '$1Plugin');
+        \$_SERVER['SERVER_NAME'] = 'dev.thinkup.com';
+    }
+
+    public function tearDown() {
+        parent::tearDown();
+    }
+
+    public function testConstructor() {
+        \$controller = new $1ConfigurationController(null, '$plugin_name_lcase');
+        \$this->assertNotNull(\$controller);
+        \$this->assertIsA(\$controller, '$1ConfigurationController');
+    }
+
+}
+END
+
+
+# Now generate the crawler test file
+
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/tests/TestOf'$1'Crawler.php'
+
+# Now insert the default methods and require statements
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/tests/TestOf'$1'Crawler.php'
+
+require_once 'tests/init.tests.php';
+require_once THINKUP_ROOT_PATH.'webapp/_lib/extlib/simpletest/autorun.php';
+require_once THINKUP_ROOT_PATH.'webapp/_lib/extlib/simpletest/web_tester.php';
+require_once THINKUP_ROOT_PATH.'webapp/plugins/$plugin_name_lcase/model/class.$1Crawler.php';
+require_once THINKUP_ROOT_PATH.'webapp/plugins/$plugin_name_lcase/tests/classes/mock.$1APIAccessor.php';
+
+class TestOf$1Crawler extends ThinkUpUnitTestCase {
+    /**
+     * @var logger
+     */
+    var logger;
+
+    public function setUp() {
+        parent::setUp();
+        \$this->logger = Logger::getInstance();
+    }
+
+    public function tearDown() {
+        parent::tearDown();
+        \$this->logger->close();
+    }
+
+}
+END
+
+# Generate the Mock API Accessor file
+preamble $1 'webapp/plugins/'$plugin_name_lcase'/tests/classes/mock.'$1'APIAccessor'
+
+# Now insert the default methods
+cat<< END >>'webapp/plugins/'$plugin_name_lcase'/tests/classes/mock.'$1'APIAccessor'
+
+class $1APIAccessor {
+    /**
+     * @var str
+     */
+    var \$api_domain = ;
+    /**
+     * @var str
+     */
+    var \$access_token_request_url = ;
+    /**
+     * @var str
+     */
+    var \$data_location = 'webapp/plugins/$plugin_name_lcase/tests/apidata/';
+    /**
+     * Make a $1 API request.
+     * @param str \$path
+     * @param str \$access_token
+     * @return array Decoded JSON response
+     */
+    public function apiRequest(\$path, \$access_token, \$fields=null) {
+        \$url = \$this->api_domain.\$path.'?access_token='.\$access_token;
+        if (\$fields != null ) {
+            foreach (\$fields as \$key=>\$value) {
+                \$url = \$url.'&'.\$key.'='.\$value;
+            }
+        }
+        \$FAUX_DATA_PATH = THINKUP_ROOT_PATH . $this->data_location;
+        \$url = str_replace(\$this->api_domain, '', \$url);
+        \$url = str_replace(':', '', \$url);
+        \$url = str_replace('/', '_', \$url);
+        \$url = str_replace('&', '-', \$url);
+        \$url = str_replace('?', '-', \$url);
+        return self::decodeFileContents(\$FAUX_DATA_PATH.\$url);
+    }
+
+    private static function decodeFileContents(\$file_path, \$decode_json=true) {
+        \$debug = (getenv('TEST_DEBUG')!==false) ? true : false;
+        \$create_files = (getenv('CREATE_FILES')!==false) ? true : false;
+        if (\$create_files) {
+            if(\$debug) {
+                echo 'CREATING '.\$file_path."\n\n";
+            }
+            exec('touch '.\$file_path);
+        }
+        if (\$debug) {
+            echo "READING LOCAL TEST DATA FILE: ".\$file_path. "\n";
+        }
+
+        \$contents=  file_get_contents(\$file_path);
+        if (\$decode_json) {
+            \$decoded = json_decode(\$contents);
+            if (\$decoded == null && \$debug) {
+                echo "JSON was not decoded! Check if it is valid JSON at http://jsonlint.com/";
+            }
+            return \$decoded;
+        } else {
+            return \$contents;
+        }
+    }
+
+    /**
+     * Make a Graph API request with the absolute URL. This URL needs to include the
+     * prefix at the start and the access token at the end as well as everything in
+     * between. It is literally the raw URL that needs to be passed in.
+     *
+     * @param str \$path
+     * @param bool \$decode_json Defaults to true, if true returns decoded JSON
+     * @return array Decoded JSON response
+     */
+    public function rawPostApiRequest(\$path, \$fields, \$decode_json=true) {
+        \$fields_string = '';
+        foreach (\$fields as \$key=>\$value) {
+            \$fields_string .= \$key.'='.\$value.'&';
+        }
+
+        // Replace the &'s in the string with a -
+        \$fields_string = str_replace('&', '-', \$fields_string);
+        \$fields_string = rtrim(/$fields_string,'-');
+
+        \$file_path = \$path . \$fields_string;
+
+        \$debug = (getenv('TEST_DEBUG')!==false) ? true : false;
+        return self::rawApiRequest(\$file_path, \$decode_json);
+    }
+
+    /**
+     * Internal use only
+     * @param str \$path
+     * @param book \$decode_json If true, return decoded JSON
+     * @return array Decoded JSON response
+     */
+    private function rawApiRequest(\$path, \$decode_json=true) {
+        \$url = \$path;
+
+        \$FAUX_DATA_PATH = THINKUP_ROOT_PATH . \$this->data_location;
+
+        \$url = preg_replace('/([\?\&])access_token\=[^\?\&]+([\?\&])*/', "$1", \$url);
+        \$url = preg_replace('/[\?\&]$/', '', \$url);
+        \$url = str_replace($this->api_domain, '', \$url);
+        \$url = str_replace($this->access_token_request_url, 'tok-', \$url);
+        \$url = str_replace(':', '', \$url);
+        \$url = str_replace('/', '_', \$url);
+        \$url = str_replace('&', '-', \$url);
+        \$url = str_replace('?', '-', \$url);
+        // If we are in debug mode report that were reading a local test file
+        if (\$debug) {
+            echo "READING LOCAL TEST DATA FILE: ".\$FAUX_DATA_PATH.\$url. '';
+        }
+        return self::decodeFileContents(\$FAUX_DATA_PATH.\$url, \$decode_json);
+    }
+
+    /**
+     * For testing purposes only
+     * @param str \$folder
+     */
+    public function setDataLocation(\$folder) {
+        \$this->data_location = \$this->data_location.\$folder;
+    }
+}
+END

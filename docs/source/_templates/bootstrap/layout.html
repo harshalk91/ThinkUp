@@ -1,0 +1,135 @@
+{% extends "basic/layout.html" %}
+
+{%- block doctype -%}
+<!DOCTYPE html>
+{%- endblock %}
+
+{# Sidebar: Rework into our Boostrap nav section. #}
+{% macro navBar() %}
+
+<section class="container">
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <div class="container">
+                <a href="/" class="brand">Think<span style="color : black; font-weight : 200;">Up</span></a>
+                <ul class="nav">
+                    <li><a href="http://thinkup.com/docs/">Docs</a></li>
+                    <li><a href="http://blog.thinkup.com/">Blog</a></li>
+                    <li><a href="http://twitter.com/thinkup"><i class="icon-twitter"></i></a></li>
+                    <li>
+                        <form action="http://thinkup.com/docs/search.html" method="get" class="form-search"><input type="text" name="q" placeholder="Search Docs" class="search-query" id="docs-search"><input type="hidden" name="check_keywords" value="yes"><input type="hidden" name="area" value="default"></form>
+
+                    </li>
+
+              </ul>
+            </div>
+        </div>
+    </nav>
+</section>
+
+<div class="container documentation">
+
+<div class="row">
+    <div class="span3">
+
+
+        <div id="tabs" class="embossed-block">
+
+            {% block sidebartoc %}
+                {% include "globaltoc.html" %}
+            {% endblock %}
+        </div>
+
+    </div>
+    <div class="span9">
+        <div class="alert alert-info">
+
+{% endmacro %}
+
+{%- block extrahead %}
+    <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.no-icons.min.css" rel="stylesheet" type="text/css">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/3.0.2/css/font-awesome.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://thinkup.com/css/insights.css" type="text/css">
+    <link rel="stylesheet" href="https://thinkup.com/css/strip.css" type="text/css">
+    <link rel="stylesheet" href="{{ pathto('_static/style.css', 1) }}" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+{% endblock %}
+
+{% block header %}{{ navBar() }}{% endblock %}
+
+{# Silence the sidebar's, relbar's #}
+{% block sidebar1 %}{% endblock %}
+{% block sidebar2 %}{% endblock %}
+{% block relbar1 %}{% endblock %}
+{% block relbar2 %}{% endblock %}
+
+{%- block content %}
+
+   {% block body %} {% endblock %}
+
+{%- endblock %}
+
+{%- block footer %}
+
+        </div><!-- end alert -->
+
+            <div class="container">
+                {% block sidebarrel %}
+                    {% include "relations.html" %}
+                {% endblock %}
+            </div>
+
+    </div>
+</div>
+</div><!-- end container -->
+
+<footer class="container footer-box">
+    <nav class="links">
+        <a href="#">Home </a>
+        <a href="http://thinkup.com/docs/">Docs</a>
+        <a href="http://blog.thinkup.com/">Blog</a>
+        <a href="http://groups.google.com/group/thinkup">Mailing List</a>
+        <!--
+        <a href="http://thinkup.com/tos">Terms</a>
+        -->
+        <a href="http://twitter.com/thinkup"><i class="icon-twitter"></i></a>
+        <a href="http://facebook.com/thinkupapp"><i class="icon-facebook"></i></a>
+        <a href="http://gplus.to/thinkup"><i class="icon-google-plus"></i></a>
+    </nav>
+    <p>&copy; 2013-2015 ThinkUp LLC. It is nice to be nice.</p>
+</footer>
+
+
+<script src="https://thinkup.com/js/bootstrap.min.js"></script>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-76614-5");
+pageTracker._trackPageview();
+} catch(err) {}
+
+var _sf_async_config={uid:2383,domain:"thinkup.com"};
+(function(){
+  function loadChartbeat() {
+    window._sf_endpt=(new Date()).getTime();
+    var e = document.createElement('script');
+    e.setAttribute('language', 'javascript');
+    e.setAttribute('type', 'text/javascript');
+    e.setAttribute('src',
+       (("https:" == document.location.protocol) ? "https://a248.e.akamai.net/chartbeat.download.akamai.com/102508/": "http://static.chartbeat.com/") +
+       "js/chartbeat.js");
+    document.body.appendChild(e);
+  }
+  var oldonload = window.onload;
+  window.onload = (typeof window.onload != 'function') ?
+     loadChartbeat: function() { oldonload(); loadChartbeat(); };
+})();
+</script>
+
+{%- endblock %}
+
